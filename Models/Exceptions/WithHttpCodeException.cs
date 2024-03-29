@@ -1,4 +1,6 @@
-namespace Application.Exceptions;
+using System.Net;
+
+namespace Models.Exceptions;
 
 public abstract class WithHttpCodeException : Exception
 {
@@ -16,5 +18,5 @@ public abstract class WithHttpCodeException : Exception
     {
     }
 
-    public abstract int HttpCode { get; }
+    public abstract HttpStatusCode StatusCode { get; }
 }

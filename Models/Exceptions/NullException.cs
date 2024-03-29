@@ -1,4 +1,6 @@
-namespace Application.Exceptions;
+using System.Net;
+
+namespace Models.Exceptions;
 
 public class NullException : WithHttpCodeException
 {
@@ -19,5 +21,5 @@ public class NullException : WithHttpCodeException
     {
     }
 
-    public override int HttpCode => 404;
+    public override HttpStatusCode StatusCode => HttpStatusCode.NotFound;
 }

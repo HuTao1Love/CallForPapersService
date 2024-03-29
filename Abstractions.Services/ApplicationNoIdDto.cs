@@ -1,8 +1,7 @@
 namespace Abstractions.Services;
 
-public record ApplicationDto(
-    Guid Id,
-    Guid Author,
+public record ApplicationNoIdDto(
+    Guid? Author,
     string? Activity,
     string? Name,
     string? Description,

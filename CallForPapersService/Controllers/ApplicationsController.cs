@@ -1,5 +1,6 @@
 using System.Globalization;
 using Abstractions.Services;
+using CallForPapersService.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CallForPapersService.Controllers;
@@ -12,33 +13,39 @@ public class ApplicationsController(IApplicationService applicationService) : Co
     private CancellationToken CancellationToken => HttpContext.RequestAborted;
 
     [HttpPost]
-    public async Task<ActionResult<ApplicationDto>> CreateApplication([FromBody] ApplicationDto applicationDto)
+    public async Task<ActionResult<ApplicationDto>> CreateApplication([FromBody] ApplicationNoIdDto applicationDto)
     {
-        return NotFound();
+        return await applicationService.CreateAsync(applicationDto);
     }
 
     [HttpPut("{id:Guid}")]
-    public async Task<ActionResult<ApplicationDto>> EditApplication(Guid id, [FromBody] ApplicationDto applicationDto)
+    public async Task<ActionResult<ApplicationDto>> EditApplication(Guid id, [FromBody] ApplicationNoIdDto applicationDto)
     {
-        return NotFound();
+        return await applicationService.UpdateAsync(id, applicationDto);
     }
 
     [HttpDelete("{id:Guid}")]
     public async Task<ActionResult> DeleteApplication(Guid id)
     {
-        return NotFound();
+        await applicationService.DeleteAsync(id, CancellationToken);
+        return Ok();
     }
 
     [HttpPost("{id:Guid}/submit")]
     public async Task<ActionResult> SubmitApplication(Guid id)
     {
-        return NotFound();
+        await applicationService.SubmitAsync(id, CancellationToken);
+        return Ok();
     }
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ApplicationDto>> GetApplicationById(Guid id)
     {
-        return NotFound();
+        var applicationDto = await applicationService.FindByIdAsync(id, CancellationToken);
+
+        if (applicationDto is null) throw new NotFoundException($"Application with ID {id}");
+
+        return applicationDto;
     }
 
     [HttpGet]
@@ -48,12 +55,12 @@ public class ApplicationsController(IApplicationService applicationService) : Co
     {
         if (submittedAfterString is null && unsubmittedOlderString is null)
         {
-            return BadRequest("SubmittedAfter xor UnsubmittedOlder must be set");
+            throw new BadRequestException("SubmittedAfter xor UnsubmittedOlder must be set");
         }
 
         if (submittedAfterString is not null && unsubmittedOlderString is not null)
         {
-            return BadRequest("Only one of params SubmittedAfter and UnsubmittedOlder must be set");
+            throw new BadRequestException("Only one of params SubmittedAfter and UnsubmittedOlder must be set");
         }
 
         if (!DateTime.TryParseExact(
@@ -63,16 +70,12 @@ public class ApplicationsController(IApplicationService applicationService) : Co
                 DateTimeStyles.None,
                 out var dateTime))
         {
-            return BadRequest($"Invalid datetime string format. Must be {DateTimeFormat}");
-        }
-
-        if (submittedAfterString is not null)
-        {
-            return new ActionResult<IEnumerable<ApplicationDto>>(
-                await applicationService.GetSubmittedApplicationsAsync(dateTime, CancellationToken));
+            throw new BadRequestException($"Invalid datetime string format. Must be {DateTimeFormat}");
         }
 
         return new ActionResult<IEnumerable<ApplicationDto>>(
-            await applicationService.GetUnsubmittedApplicationsAsync(dateTime, CancellationToken));
+            submittedAfterString is not null
+                ? await applicationService.GetSubmittedApplicationsAsync(dateTime, CancellationToken)
+                : await applicationService.GetUnsubmittedApplicationsAsync(dateTime, CancellationToken));
     }
 }

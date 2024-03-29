@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Models;
+using Models.Exceptions;
 using Repositories;
 
 namespace Database;
@@ -48,13 +49,9 @@ public class ApplicationRepository(IDbContextFactory<DatabaseContext> contextFac
         await context.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task DeleteAsync(Application application, CancellationToken cancellationToken = default)
     {
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-
-        Application? application = await FindByIdAsync(id, cancellationToken);
-
-        if (application is null) throw new NullException(nameof(application));
 
         context.Applications.Remove(application);
         await context.SaveChangesAsync(cancellationToken);

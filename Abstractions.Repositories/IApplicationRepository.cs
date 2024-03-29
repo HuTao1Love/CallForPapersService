@@ -10,5 +10,5 @@ public interface IApplicationRepository
     Task<IEnumerable<Application>> GetSubmittedApplicationsAsync(DateTime createdAfter, CancellationToken cancellationToken = default);
     Task<IEnumerable<Application>> GetUnsubmittedApplicationsAsync(DateTime createdBefore, CancellationToken cancellationToken = default);
     Task UpdateAsync(Application application, CancellationToken cancellationToken = default);
-    Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+    Task DeleteAsync(Application application, CancellationToken cancellationToken = default);
 }

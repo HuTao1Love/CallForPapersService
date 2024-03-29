@@ -1,4 +1,5 @@
 using Abstractions.Services;
+using CallForPapersService.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CallForPapersService.Controllers;
@@ -10,10 +11,8 @@ public class UsersController(IApplicationService applicationService) : Controlle
     [HttpGet("{authorId:Guid}/currentapplication")]
     public async Task<ActionResult<ApplicationDto>> GetCurrentApplication(Guid authorId)
     {
-        var activityDto = await applicationService.GetCurrentApplicationAsync(authorId);
-
-        return activityDto is not null
-            ? activityDto
-            : NotFound("User's current application not found");
+        var applicationDto = await applicationService.GetCurrentApplicationAsync(authorId);
+        if (applicationDto is null) throw new NotFoundException($"Not found current application of author {authorId}");
+        return applicationDto;
     }
 }

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Models;
 
 namespace Database;
 
@@ -37,6 +38,24 @@ public sealed class DatabaseContext : DbContext
             .Property(i => i.Activity)
             .HasConversion<int>();
 
+        modelBuilder.Entity<Application>()
+            .Property(p => p.CreatedTime)
+            .HasConversion(
+                src => src.Kind == DateTimeKind.Utc ? src : DateTime.SpecifyKind(src, DateTimeKind.Utc),
+                dst => dst.Kind == DateTimeKind.Utc ? dst : DateTime.SpecifyKind(dst, DateTimeKind.Utc));
+
+        modelBuilder.Entity<Application>()
+            .Property(p => p.SubmittedTime)
+            .HasConversion(src => SetDateTimeKind(src), dst => SetDateTimeKind(dst));
+
         base.OnModelCreating(modelBuilder);
+    }
+
+    private static DateTime? SetDateTimeKind(DateTime? dateTime)
+    {
+        if (dateTime is null) return null;
+        return dateTime.Value.Kind == DateTimeKind.Utc
+            ? dateTime.Value
+            : DateTime.SpecifyKind(dateTime.Value, DateTimeKind.Utc);
     }
 }
