@@ -75,7 +75,7 @@ public class ApplicationService(IApplicationRepository repository) : IApplicatio
         var application = await repository.FindByIdAsync(id, cancellationToken);
         if (application is null) throw new NullException($"Application with id {id} not found");
 
-        if (!application.AsDto().AllRequiredDefined()) throw new NotDefinedException();
+        if (!application.AsDto().AllRequiredDefined()) throw new RequiredValuesNotDefinedException();
         if (application.SubmittedTime is not null) throw new ApplicationIsSubmittedException();
 
         application.SubmittedTime = DateTime.Now;
