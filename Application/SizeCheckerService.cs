@@ -19,5 +19,5 @@ public static class SizeCheckerService
         if (!CheckSize(value, maxSize)) throw new StringIsTooLongException(value ?? string.Empty);
     }
 
-    private static bool CheckSize(string? value, int maxSize) => value?.Length <= maxSize;
+    private static bool CheckSize(string? value, int maxSize) => value is null || (value.Length <= maxSize);
 }
