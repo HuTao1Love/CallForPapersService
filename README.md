@@ -5,8 +5,6 @@
 2. Запуск через docker-compose:
    - docker-compose run --build
 
-В ином случае
-
 # Задание
 ## Постановка задачи
 
