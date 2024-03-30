@@ -5,7 +5,6 @@ using Application.Exceptions;
 using Models.Exceptions;
 using Moq;
 using Repositories;
-using System.Linq;
 
 namespace Test;
 
@@ -46,7 +45,7 @@ public class ApplicationServiceTests
             null,
             null);
 
-        await Assert.ThrowsAsync<StringIsTooLongException>(() => _applicationService.CreateAsync(dto));g
+        await Assert.ThrowsAsync<StringIsTooLongException>(() => _applicationService.CreateAsync(dto));
     }
 
     [Theory]
