@@ -3,7 +3,7 @@
 # Порядок установки
 1. Склонировать и перейти в корневую папку приложения
 2. Запуск через docker-compose:
-   - docker-compose run --build
+   - docker-compose up --build
 3. Сервер будет слушать localhost:8080 по умолчанию
 
 # Задание
