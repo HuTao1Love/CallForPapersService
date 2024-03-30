@@ -63,10 +63,9 @@ public class ApplicationsController(IApplicationService applicationService) : Co
             throw new BadRequestException("Only one of params SubmittedAfter and UnsubmittedOlder must be set");
         }
 
-        if (!DateTime.TryParseExact(
-                submittedAfterString ?? unsubmittedOlderString,
-                DateTimeFormat,
-                null,
+        if (!DateTime.TryParse(
+                (submittedAfterString ?? unsubmittedOlderString)?.Trim('"'),
+                CultureInfo.InvariantCulture,
                 DateTimeStyles.None,
                 out var dateTime))
         {

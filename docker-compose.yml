@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  database:
+    image: 'postgres:15'
+    environment:
+      POSTGRES_USER: "hutao"
+      POSTGRES_PASSWORD: "hutao"
+      POSTGRES_DB: "postgres"
+    ports:
+      - "5432:5432"
+
+  call_for_papers_service:
+    build:
+      context: .
+      dockerfile: CallForPapersService/Dockerfile
+
+    ports:
+      - "8080:8080"
+    depends_on:
+      - database

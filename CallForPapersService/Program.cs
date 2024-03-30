@@ -3,9 +3,6 @@ using Application.Extensions;
 using CallForPapersService;
 using Database.Extensions;
 
-AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
-AppContext.SetSwitch("Npgsql.DisableDateTimeInfinityConversions", true);
-
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("Properties/appsettings.json", false);
 

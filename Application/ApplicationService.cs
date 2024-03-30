@@ -37,6 +37,7 @@ public class ApplicationService(IApplicationRepository repository) : IApplicatio
         ArgumentNullException.ThrowIfNull(applicationDto);
 
         if (applicationDto.Author is null) throw new AuthorMustBeDefinedException();
+        applicationDto.AssertSize();
 
         if (await FindNotSubmittedApplicationAsync(applicationDto.Author.Value, cancellationToken) is not null)
             throw new UserAlreadyHaveUnsubmittedApplicationException();
@@ -53,6 +54,7 @@ public class ApplicationService(IApplicationRepository repository) : IApplicatio
     {
         ArgumentNullException.ThrowIfNull(applicationDto);
 
+        applicationDto.AssertSize();
         var application = await repository.FindByIdAsync(id, cancellationToken);
         if (applicationDto.Author is not null) throw new InvalidUpdateException("Author cannot be changed");
         if (application is null) throw new NullException($"Application with id {id} not found");
