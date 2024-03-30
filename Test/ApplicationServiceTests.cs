@@ -5,6 +5,7 @@ using Application.Exceptions;
 using Models.Exceptions;
 using Moq;
 using Repositories;
+using System.Linq;
 
 namespace Test;
 
@@ -35,12 +36,25 @@ public class ApplicationServiceTests
         await Assert.ThrowsAsync(exception, () => _applicationService.CreateAsync(dto));
     }
 
+    [Fact]
+    public async Task TooMuchStringSizeExceptionTest()
+    {
+        var dto = new ApplicationNoIdDto(
+            FromString(GuidExample),
+            null,
+            string.Concat(Enumerable.Repeat("X", 101)),
+            null,
+            null);
+
+        await Assert.ThrowsAsync<StringIsTooLongException>(() => _applicationService.CreateAsync(dto));g
+    }
+
     [Theory]
     [InlineData(GuidExample, "report", "name", "description", "outline")]
     [InlineData(GuidExample, "report", null, null, null)]
     public async Task SuccessCreateTest(string author, string? activity, string? name, string? description, string? outline)
     {
-        var dto = new ApplicationNoIdDto(System.Guid.Parse(author), activity, name, description, outline);
+        var dto = new ApplicationNoIdDto(Guid.Parse(author), activity, name, description, outline);
 
         // if something happened, exception will throw & test failed
         await _applicationService.CreateAsync(dto);
