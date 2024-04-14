@@ -1,13 +1,13 @@
 <Project>
     <PropertyGroup>
         <TargetFramework>net8.0</TargetFramework>
-        <ImplicitUsings>disable</ImplicitUsings>
+        <WarningsAsErrors>enable</WarningsAsErrors>
+        <CodeAnalysisTreatWarningsAsErrors>enable</CodeAnalysisTreatWarningsAsErrors>
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
     <PropertyGroup>
         <AnalysisLevel>latest</AnalysisLevel>
-        <CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
         <AnalysisMode>All</AnalysisMode>
     </PropertyGroup>
 
