@@ -1,9 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Abstractions.Services;
+using Application.Contracts;
+using Application.Services;
 using Models;
 
 namespace Application;
@@ -14,6 +10,6 @@ public class ActivityService : IActivityService
     {
         return Task.FromResult(
             Enum.GetValues<Activity>()
-                .Select(i => new ActivityDto(Enum.GetName(i)!, i.GetDescription())));
+                .Select(i => new ActivityDto(Enum.GetName(i)!, ActivityDescriptionProvider.GetDescription(i))));
     }
 }

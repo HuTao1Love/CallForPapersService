@@ -19,9 +19,6 @@ dotnet_diagnostic.CA1001.severity = error
 # SA1503: Braces should not be omitted
 dotnet_diagnostic.SA1503.severity = none
 
-# SA1200: Using directives should be placed correctly
-dotnet_diagnostic.SA1200.severity = none
-
 # SA1101: Prefix local calls with this
 dotnet_diagnostic.SA1101.severity = none
 
@@ -79,11 +76,23 @@ dotnet_diagnostic.SA1500.severity = error
 csharp_style_namespace_declarations = file_scoped:warning
 
 # Disable XML docs
+dotnet_diagnostic.CS1591.severity = none
+
+# Enable nested types inside parent types
 dotnet_diagnostic.CA1034.severity = none
+
+# Disable ConfigureAwait
 dotnet_diagnostic.CA2007.severity = none
+
+# Disable "Use concrete types when possible for improved performance"
 dotnet_diagnostic.CA1859.severity = none
-dotnet_diagnostic.IDE0005.severity = none
-dotnet_diagnostic.SA1652.severity = none
-dotnet_diagnostic.SA1002.severity = none
-dotnet_diagnostic.SA1009.severity = none
+
+# Disable "Null forgiving operator is not allowed"
 dotnet_diagnostic.SK1200.severity = none
+
+# Disable sort usings
+dotnet_diagnostic.SA1210.severity = none
+dotnet_diagnostic.SA1208.severity = none
+
+# Opening Parenthesis Must Be On Declaration Line
+dotnet_diagnostic.SA1110.severity = none

@@ -1,84 +1,100 @@
-using Abstractions.Services;
+using System.Globalization;
+using Application.Contracts;
 using Application.Exceptions;
-using Models.Exceptions;
-using Repositories;
+using Application.Services;
+using FluentValidation;
 
 namespace Application;
 
-public class ApplicationService(IApplicationRepository repository) : IApplicationService
+public class ApplicationService(
+    IApplicationRepository repository,
+    IValidator<ApplicationDto> applicationDtoValidator) : IApplicationService
 {
-    public async Task<ApplicationDto?> GetCurrentApplicationAsync(Guid authorId, CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<ApplicationDto>> GetApplicationsAsync(
+        string? submittedAfterString,
+        string? unsubmittedOlderString,
+        CancellationToken cancellationToken = default)
     {
-        return (await repository.FindNotSubmittedApplicationAsync(authorId, cancellationToken))?.AsDto();
+        bool isEmptySubmitted = string.IsNullOrWhiteSpace(submittedAfterString);
+        bool isEmptyUnsubmitted = string.IsNullOrWhiteSpace(unsubmittedOlderString);
+
+        if ((isEmptySubmitted && isEmptyUnsubmitted) || (!isEmptySubmitted && !isEmptyUnsubmitted))
+        {
+            throw WithHttpCodeException.NewBadRequest("SubmittedAfter xor UnsubmittedOlder must be set");
+        }
+
+        if (!DateTime.TryParse(
+                (submittedAfterString ?? unsubmittedOlderString)?.Trim('"'),
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out var dateTime))
+        {
+            throw WithHttpCodeException.NewBadRequest(
+                $"Invalid datetime string format. Must be {CultureInfo.InvariantCulture.DateTimeFormat}");
+        }
+
+        return Converter.ToDto(
+            submittedAfterString is not null
+                ? await repository.GetSubmittedApplicationsAsync(dateTime, cancellationToken)
+                : await repository.GetNotSubmittedApplicationsAsync(dateTime, cancellationToken));
     }
 
     public async Task<ApplicationDto?> FindByIdAsync(Guid id, CancellationToken cancellationToken = default)
-    {
-        return (await repository.FindByIdAsync(id, cancellationToken))?.AsDto();
-    }
+            => Converter.ToDto(await repository.FindByIdAsync(id, cancellationToken));
 
-    public async Task<ApplicationDto?> FindNotSubmittedApplicationAsync(Guid authorId, CancellationToken cancellationToken = default)
-    {
-        return (await repository.FindNotSubmittedApplicationAsync(authorId, cancellationToken))?.AsDto();
-    }
+    public async Task<ApplicationDto?> FindNotSubmittedApplicationAsync(
+        Guid authorId,
+        CancellationToken cancellationToken = default)
+            => Converter.ToDto(await repository.FindNotSubmittedApplicationAsync(authorId, cancellationToken));
 
-    public async Task<IEnumerable<ApplicationDto>> GetSubmittedApplicationsAsync(DateTime createdAfter, CancellationToken cancellationToken = default)
-    {
-        return (await repository.GetSubmittedApplicationsAsync(createdAfter, cancellationToken)).Select(i => i.AsDto());
-    }
-
-    public async Task<IEnumerable<ApplicationDto>> GetUnsubmittedApplicationsAsync(DateTime createdBefore, CancellationToken cancellationToken = default)
-    {
-        return (await repository.GetUnsubmittedApplicationsAsync(createdBefore, cancellationToken)).Select(i => i.AsDto());
-    }
-
-    public async Task<ApplicationDto> CreateAsync(ApplicationNoIdDto applicationDto, CancellationToken cancellationToken = default)
+    public async Task<ApplicationDto> CreateAsync(
+        ApplicationNoIdDto applicationDto,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(applicationDto);
 
-        if (applicationDto.Author is null) throw new AuthorMustBeDefinedException();
-        applicationDto.AssertSize();
+        var applicationDtoWithId = Converter.WithId(applicationDto, Guid.NewGuid());
+        await applicationDtoValidator.ValidateAndThrowAsync(applicationDtoWithId, cancellationToken);
 
-        if (await FindNotSubmittedApplicationAsync(applicationDto.Author.Value, cancellationToken) is not null)
-            throw new UserAlreadyHaveUnsubmittedApplicationException();
+        if (await FindNotSubmittedApplicationAsync(applicationDtoWithId.Author, cancellationToken) is not null)
+        {
+            throw WithHttpCodeException.NewBadRequest("User already have not submitted application");
+        }
 
-        ApplicationDto applicationDtoWithId = applicationDto.WithId(Guid.NewGuid(), applicationDto.Author.Value);
-        if (!applicationDtoWithId.AnyDefined()) throw new AnyFieldMustBeDefinedException();
-
-        var application = applicationDtoWithId.AsEntity(DateTime.Now);
+        var application = Converter.ToEntity(applicationDtoWithId, DateTime.Now);
         await repository.CreateAsync(application, cancellationToken);
-        return application.AsDto();
+
+        return applicationDtoWithId;
     }
 
-    public async Task<ApplicationDto> UpdateAsync(Guid id, ApplicationNoIdDto applicationDto, CancellationToken cancellationToken = default)
+    public async Task<ApplicationDto> UpdateAsync(
+        Guid id,
+        ApplicationNoIdDto applicationDto,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(applicationDto);
 
-        applicationDto.AssertSize();
-        var application = await repository.FindByIdAsync(id, cancellationToken);
-        if (applicationDto.Author is not null) throw new InvalidUpdateException("Author cannot be changed");
-        if (application is null) throw new NullException($"Application with id {id} not found");
-        if (application.SubmittedTime is not null) throw new ApplicationIsSubmittedException();
+        var application = await GetById(id, cancellationToken);
 
-        application.Activity = UpdateIfNotNull(application.Activity.ToString(), applicationDto.Activity).FromString();
-        application.Name = UpdateIfNotNull(application.Name, applicationDto.Name);
-        application.Description = UpdateIfNotNull(application.Description, applicationDto.Description);
-        application.Outline = UpdateIfNotNull(application.Outline, applicationDto.Outline);
+        ApplicationUpdater.UpdateStatus(application, applicationDto);
 
-        var result = application.AsDto();
+        var result = Converter.ToDto(application);
+        await applicationDtoValidator.ValidateAndThrowAsync(result, cancellationToken);
 
-        if (!result.AnyDefined()) throw new AnyFieldMustBeDefinedException();
         await repository.UpdateAsync(application, cancellationToken);
+
         return result;
     }
 
     public async Task SubmitAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var application = await repository.FindByIdAsync(id, cancellationToken);
-        if (application is null) throw new NullException($"Application with id {id} not found");
+        var application = await GetById(id, cancellationToken);
 
-        if (!application.AsDto().AllRequiredDefined()) throw new RequiredValuesNotDefinedException();
-        if (application.SubmittedTime is not null) throw new ApplicationIsSubmittedException();
+        await applicationDtoValidator.ValidateAsync(
+            Converter.ToDto(application),
+            options => options.IncludeAllRuleSets().ThrowOnFailures(),
+            cancellationToken);
+        ThrowIfSubmitted(application);
 
         application.SubmittedTime = DateTime.Now;
 
@@ -87,23 +103,23 @@ public class ApplicationService(IApplicationRepository repository) : IApplicatio
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var application = await repository.FindByIdAsync(id, cancellationToken);
-
-        if (application is null) throw new NullException($"Application with id {id} not found");
-        if (application.SubmittedTime is not null) throw new ApplicationIsSubmittedException();
+        var application = await GetById(id, cancellationToken);
+        ThrowIfSubmitted(application);
 
         await repository.DeleteAsync(application, cancellationToken);
     }
 
-    private static string? UpdateIfNotNull(string? src, string? value)
+    private static void ThrowIfSubmitted(Models.Application application)
     {
-        if (value is null) return src;
-
-        if (value.Length == 0 || value.Equals("null", StringComparison.OrdinalIgnoreCase))
+        if (application.SubmittedTime is not null)
         {
-            return null;
+            throw WithHttpCodeException.NewBadRequest("Application is submitted");
         }
+    }
 
-        return value;
+    private async Task<Models.Application> GetById(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await repository.FindByIdAsync(id, cancellationToken)
+               ?? throw WithHttpCodeException.NewNotFound($"Application with id {id} not found");
     }
 }
